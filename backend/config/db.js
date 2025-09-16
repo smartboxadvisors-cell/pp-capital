@@ -1,11 +1,19 @@
 const mongoose = require('mongoose')
 
 const connectDb = async () => {
+    const uri = process.env.MONGODB_URI
+    if (!uri) {
+        console.error('Missing MONGODB_URI environment variable')
+        process.exit(1)
+    }
     try {
-        const connect = await mongoose.connect('mongodb+srv://shivam:shivam@cluster0.02nbsmp.mongodb.net/mutualfunds?retryWrites=true&w=majority&appName=Cluster0')
+        await mongoose.connect(uri, {
+            serverSelectionTimeoutMS: 30000,
+            socketTimeoutMS: 45000,
+        })
         console.log('Database is connected')
     } catch (error) {
-        console.log(err)
+        console.error('Failed to connect to MongoDB:', error?.message || error)
         process.exit(1)
     }
 }
