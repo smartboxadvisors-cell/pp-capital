@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const connectDb = require('./config/db');
 const listRouter = require('./routes/list');
+const authRouter = require('./routes/auth');
 
 const app = express();
 
@@ -10,7 +11,10 @@ app.use(express.json());
 
 connectDb();
 
-// ✅ this must be `use`, not `get`
+// Auth routes
+app.use('/api/auth', authRouter);
+
+// List routes
 app.use('/api', listRouter);
 
 // optional health check
