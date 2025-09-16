@@ -6,7 +6,7 @@ router.post('/login', (req, res) => {
     const { email, password } = req.body;
     
     // Check credentials
-    if (email === 'smartbox.advisors@gmail.com' && password === 'Params@01') {
+    if (email === process.env.EMAIL && password === process.env.PASSWORD) {
         res.json({
             success: true,
             token: 'authenticated',
