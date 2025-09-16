@@ -10,24 +10,42 @@ const Login = () => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        setError(''); // Clear previous errors
+        
+        // Basic validation
+        if (!email.trim() || !password.trim()) {
+            setError('Please enter both email and password');
+            return;
+        }
+
         try {
             const RAW_API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
             const API_BASE = /\/api\/?$/.test(RAW_API_BASE)
                 ? RAW_API_BASE.replace(/\/$/, '')
                 : `${RAW_API_BASE.replace(/\/$/, '')}/api`;
+            
+            console.log('Attempting login to:', `${API_BASE}/auth/login`);
+            
             const response = await fetch(`${API_BASE}/auth/login`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ email, password }),
+                body: JSON.stringify({ email: email.trim(), password }),
             });
+
+            // Handle non-JSON responses
+            const contentType = response.headers.get('content-type');
+            if (!contentType || !contentType.includes('application/json')) {
+                throw new Error('Server returned non-JSON response. Check if backend is running.');
+            }
 
             const data = await response.json();
 
             if (data.success) {
                 // Store authentication token
                 localStorage.setItem('token', data.token);
+                console.log('Login successful, redirecting...');
                 // Redirect to main page
                 navigate('/');
             } else {
@@ -35,7 +53,11 @@ const Login = () => {
             }
         } catch (err) {
             console.error('Login error:', err);
-            setError(`Error: ${err.message}`);
+            if (err.name === 'TypeError' && err.message.includes('fetch')) {
+                setError('Cannot connect to server. Please check if the backend is running.');
+            } else {
+                setError(err.message || 'An error occurred during login');
+            }
         }
     };
 
