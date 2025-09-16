@@ -11,8 +11,11 @@ const Login = () => {
     const handleSubmit = async (e) => {
         e.preventDefault();
         try {
-            const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-            const response = await fetch(`${API_URL}/api/auth/login`, {
+            const RAW_API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+            const API_BASE = /\/api\/?$/.test(RAW_API_BASE)
+                ? RAW_API_BASE.replace(/\/$/, '')
+                : `${RAW_API_BASE.replace(/\/$/, '')}/api`;
+            const response = await fetch(`${API_BASE}/auth/login`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
