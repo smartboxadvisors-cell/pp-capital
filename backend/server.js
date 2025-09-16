@@ -6,7 +6,10 @@ const authRouter = require('./routes/auth');
 
 const app = express();
 
-app.use(cors());
+app.use(cors({
+  origin: ['https://fancy-stardust-49f964.netlify.app', 'http://localhost:5173'],
+  credentials: true
+}));
 app.use(express.json());
 
 connectDb();
