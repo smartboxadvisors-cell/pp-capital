@@ -1,5 +1,7 @@
 // src/api/imports.js
-const RAW_API_BASE = import.meta.env?.VITE_API_URL || 'http://localhost:5000/api';
+const RAW_API_BASE =
+  import.meta.env?.VITE_API_URL || 'https://pp-capital-zdto.vercel.app/api';
+
 // Ensure the base ends with /api exactly once
 const API_BASE = /\/api\/?$/.test(RAW_API_BASE)
   ? RAW_API_BASE.replace(/\/$/, '')
@@ -55,7 +57,6 @@ export async function fetchImports(
 
   const setIfPresent = (key, val) => {
     if (val === null || val === undefined) return;
-    // allow 0 and "0", skip only empty string
     if (typeof val === 'string') {
       if (val.trim() === '') return;
       params.set(key, val.trim());
@@ -88,10 +89,24 @@ export async function fetchImports(
 
   const url = `${API_BASE}/imports?${params.toString()}`;
 
+  // 🔐 attach token returned by /auth/login
+  const token = localStorage.getItem('token');
+
   const res = await fetch(url, {
-    headers: { Accept: 'application/json' },
+    headers: {
+      Accept: 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
     signal,
   });
+
+  // 🚫 not authenticated → clear token and send user to login
+  if (res.status === 401) {
+    localStorage.removeItem('token');
+    // use replace to avoid back button returning to a 401 page
+    window.location.replace('/login');
+    return;
+  }
 
   const ct = res.headers.get('content-type') || '';
   const body = await res.text();
@@ -117,4 +132,3 @@ export async function fetchImports(
     totalPages: Math.max(1, Number(json.totalPages || 1)),
   };
 }
-  

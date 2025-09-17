@@ -19,7 +19,7 @@ const Login = () => {
         }
 
         try {
-            const RAW_API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+            const RAW_API_BASE = import.meta.env.VITE_API_URL || 'https://pp-capital-zdto.vercel.app/api';
             const API_BASE = /\/api\/?$/.test(RAW_API_BASE)
                 ? RAW_API_BASE.replace(/\/$/, '')
                 : `${RAW_API_BASE.replace(/\/$/, '')}/api`;
@@ -39,6 +39,7 @@ const Login = () => {
             if (!contentType || !contentType.includes('application/json')) {
                 throw new Error('Server returned non-JSON response. Check if backend is running.');
             }
+            
 
             const data = await response.json();
 
