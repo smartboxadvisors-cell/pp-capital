@@ -2,96 +2,21 @@
 const RAW_API_BASE =
   import.meta.env?.VITE_API_URL || 'https://pp-capital-zdto.vercel.app/api';
 
-// Ensure the base ends with /api exactly once
 const API_BASE = /\/api\/?$/.test(RAW_API_BASE)
   ? RAW_API_BASE.replace(/\/$/, '')
   : `${RAW_API_BASE.replace(/\/$/, '')}/api`;
 
-/**
- * Fetch paged, filtered imports from backend.
- *
- * @param {Object} params
- * @param {number} params.page
- * @param {number} params.limit
- * @param {string} params.scheme
- * @param {string} params.instrument
- * @param {string} params.isin
- * @param {string} params.rating
- * @param {string} params.from           // report_date from (yyyy-mm-dd)
- * @param {string} params.to             // report_date to   (yyyy-mm-dd)
- * @param {number|null} params.quantityMin
- * @param {number|null} params.quantityMax
- * @param {number|null} params.pctToNavMin
- * @param {number|null} params.pctToNavMax
- * @param {number|null} params.ytmMin
- * @param {number|null} params.ytmMax
- * @param {string} params.modifiedFrom   // ISO date (yyyy-mm-dd)
- * @param {string} params.modifiedTo     // ISO date (yyyy-mm-dd)
- * @param {AbortSignal} [signal]         // optional AbortController signal
- */
-export async function fetchImports(
-  {
-    page = 1,
-    limit = 50,
-    scheme = '',
-    instrument = '',
-    isin = '',
-    rating = '',
-    from = '',
-    to = '',
-    market_value_lacs = null,
-    quantityMin = null,
-    quantityMax = null,
-    pctToNavMin = null,
-    pctToNavMax = null,
-    ytmMin = null,
-    ytmMax = null,
-    modifiedFrom = '',
-    modifiedTo = '',
-  } = {},
-  { signal } = {}
-) {
-  const params = new URLSearchParams();
-  params.set('page', String(page));
-  params.set('limit', String(limit));
+function setIfPresent(params, key, val) {
+  if (val === null || val === undefined) return;
+  if (typeof val === 'string') {
+    const t = val.trim();
+    if (t) params.set(key, t);
+  } else {
+    params.set(key, String(val));
+  }
+}
 
-  const setIfPresent = (key, val) => {
-    if (val === null || val === undefined) return;
-    if (typeof val === 'string') {
-      if (val.trim() === '') return;
-      params.set(key, val.trim());
-    } else {
-      params.set(key, String(val));
-    }
-  };
-
-  // text / exact-ish
-  setIfPresent('scheme', scheme);
-  setIfPresent('instrument', instrument);
-  setIfPresent('isin', isin);
-  setIfPresent('rating', rating);
-
-  // report_date range
-  setIfPresent('from', from);
-  setIfPresent('to', to);
-
-  // numeric ranges
-  setIfPresent('quantityMin', quantityMin);
-  setIfPresent('quantityMax', quantityMax);
-  setIfPresent('pctToNavMin', pctToNavMin);
-  setIfPresent('pctToNavMax', pctToNavMax);
-  setIfPresent('ytmMin', ytmMin);
-  setIfPresent('ytmMax', ytmMax);
-
-  // modified range
-  setIfPresent('modifiedFrom', modifiedFrom);
-  setIfPresent('modifiedTo', modifiedTo);
-
-  const url = `${API_BASE}/imports?${params.toString()}`;
-
-  // 🔐 attach token returned by /auth/login
-  const token = localStorage.getItem('token');
-
+async function tryFetch(url, token, signal) {
   const res = await fetch(url, {
     headers: {
       Accept: 'application/json',
@@ -100,17 +25,14 @@ export async function fetchImports(
     signal,
   });
 
-  // 🚫 not authenticated → clear token and send user to login
   if (res.status === 401) {
     localStorage.removeItem('token');
-    // use replace to avoid back button returning to a 401 page
     window.location.replace('/login');
-    return;
+    return { aborted: true };
   }
 
-  const ct = res.headers.get('content-type') || '';
   const body = await res.text();
-
+  const ct = res.headers.get('content-type') || '';
   if (!ct.includes('application/json')) {
     throw new Error(`Expected JSON, got: ${body.slice(0, 200)}…`);
   }
@@ -118,7 +40,7 @@ export async function fetchImports(
   let json;
   try {
     json = JSON.parse(body);
-  } catch (e) {
+  } catch {
     throw new Error(`Invalid JSON: ${body.slice(0, 200)}…`);
   }
 
@@ -126,9 +48,103 @@ export async function fetchImports(
     throw new Error(json?.error || json?.message || `HTTP ${res.status}`);
   }
 
-  return {
-    items: Array.isArray(json.items) ? json.items : [],
-    total: Number(json.total || 0),
-    totalPages: Math.max(1, Number(json.totalPages || 1)),
-  };
+  return { json };
+}
+
+/**
+ * Fetch paged, filtered imports.
+ */
+export async function fetchImports(
+  {
+    page = 1,
+    limit = 50,
+
+    scheme = '',
+    instrument = '',
+    isin = '',
+    rating = '',
+
+    from = '',
+    to = '',
+
+    quantityMin = null,
+    quantityMax = null,
+    pctToNavMin = null,
+    pctToNavMax = null,
+    ytmMin = null,
+    ytmMax = null,
+
+    modifiedFrom = '',
+    modifiedTo = '',
+
+    // IMPORTANT: default FALSE so we don’t accidentally filter out everything
+    hideIncomplete = false,
+
+    // optional hooks
+    mvMin = null,
+    mvMax = null,
+  } = {},
+  { signal } = {}
+) {
+  const token = localStorage.getItem('token');
+  const params = new URLSearchParams();
+
+  params.set('page', String(page));
+  params.set('limit', String(limit));
+
+  setIfPresent(params, 'scheme', scheme);
+  setIfPresent(params, 'instrument', instrument);
+  setIfPresent(params, 'isin', isin);
+  setIfPresent(params, 'rating', rating);
+
+  setIfPresent(params, 'from', from);
+  setIfPresent(params, 'to', to);
+
+  setIfPresent(params, 'quantityMin', quantityMin);
+  setIfPresent(params, 'quantityMax', quantityMax);
+  setIfPresent(params, 'pctToNavMin', pctToNavMin);
+  setIfPresent(params, 'pctToNavMax', pctToNavMax);
+  setIfPresent(params, 'ytmMin', ytmMin);
+  setIfPresent(params, 'ytmMax', ytmMax);
+
+  setIfPresent(params, 'mvMin', mvMin);
+  setIfPresent(params, 'mvMax', mvMax);
+
+  setIfPresent(params, 'modifiedFrom', modifiedFrom);
+  setIfPresent(params, 'modifiedTo', modifiedTo);
+
+  params.set('hideIncomplete', hideIncomplete ? '1' : '0');
+
+  // Try /list/imports first; if it 404s or returns shape we don't expect, fall back to /imports
+  const urls = [
+    `${API_BASE}/list/imports?${params.toString()}`,
+    `${API_BASE}/imports?${params.toString()}`,
+  ];
+
+  let lastErr;
+  for (const url of urls) {
+    try {
+      const res = await tryFetch(url, token, signal);
+      if (!res || res.aborted) return;
+      const { json } = res;
+
+      // Normalize response
+      const items = Array.isArray(json.items) ? json.items : [];
+      const total = Number(json.total || 0);
+      const totalPages = Math.max(1, Math.ceil(total / Number(limit || 50)));
+
+      // If we got items or total reported, accept and return
+      if (items.length > 0 || total > 0 || json.ok) {
+        return { items, total, totalPages };
+      }
+      // If empty here, still return—caller can show “No results”.
+      return { items, total, totalPages };
+    } catch (e) {
+      lastErr = e;
+      // continue to next url
+    }
+  }
+
+  // If both attempts failed:
+  throw lastErr || new Error('Failed to fetch imports');
 }

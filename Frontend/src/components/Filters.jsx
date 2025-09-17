@@ -47,6 +47,10 @@ export default function Filters({
   ytmMin, setYtmMin,
   ytmMax, setYtmMax,
 
+  // 🔥 Market Value (₹) ranges
+  mvMin, setMvMin,
+  mvMax, setMvMax,
+
   // Dates
   fromInput, setFromInput,         // Report Date From
   toInput, setToInput,             // Report Date To
@@ -187,6 +191,30 @@ export default function Filters({
             placeholder="e.g. 12"
             value={ytmMax ?? ''}
             onChange={(e) => setYtmMax(e.target.value === '' ? null : Number(e.target.value))}
+          />
+        </div>
+
+        {/* 🔥 Market Value (₹) Min/Max */}
+        <div className={styles.field}>
+          <label className={styles.label}>Market Value (₹) Min</label>
+          <input
+            className={styles.input}
+            type="number"
+            inputMode="numeric"
+            placeholder="e.g. 1000000"
+            value={mvMin ?? ''}
+            onChange={(e) => setMvMin(e.target.value === '' ? null : Number(e.target.value))}
+          />
+        </div>
+        <div className={styles.field}>
+          <label className={styles.label}>Market Value (₹) Max</label>
+          <input
+            className={styles.input}
+            type="number"
+            inputMode="numeric"
+            placeholder="e.g. 50000000"
+            value={mvMax ?? ''}
+            onChange={(e) => setMvMax(e.target.value === '' ? null : Number(e.target.value))}
           />
         </div>
 

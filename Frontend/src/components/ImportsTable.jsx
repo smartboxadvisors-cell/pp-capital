@@ -1,3 +1,4 @@
+// src/components/ImportsTable.jsx
 import { useEffect, useMemo, useState } from 'react';
 import { fetchImports } from '../api/imports';
 import useDebounce from '../hooks/useDebounce';
@@ -10,19 +11,47 @@ export default function ImportsTable() {
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(50);
 
-  // Inputs (controlled)
+  // ----- Controlled inputs (all fields) -----
   const [schemeInput, setSchemeInput] = useState('');
+  const [instrumentInput, setInstrumentInput] = useState('');
   const [ratingInput, setRatingInput] = useState('');
   const [isinInput, setIsinInput] = useState('');
-  const [fromInput, setFromInput] = useState('');
-  const [toInput, setToInput] = useState('');
+  const [fromInput, setFromInput] = useState(''); // report date from (yyyy-mm-dd)
+  const [toInput, setToInput] = useState('');     // report date to   (yyyy-mm-dd)
 
-  // Debounced values
+  // Ranges
+  const [quantityMin, setQuantityMin] = useState(null);
+  const [quantityMax, setQuantityMax] = useState(null);
+  const [pctToNavMin, setPctToNavMin] = useState(null);
+  const [pctToNavMax, setPctToNavMax] = useState(null);
+  const [ytmMin, setYtmMin] = useState(null);
+  const [ytmMax, setYtmMax] = useState(null);
+  const [mvMin, setMvMin] = useState(null);   // rupees
+  const [mvMax, setMvMax] = useState(null);
+
+  // Modified window
+  const [modifiedFrom, setModifiedFrom] = useState('');
+  const [modifiedTo, setModifiedTo] = useState('');
+
+  // ----- Debounced values (to avoid refetch every keystroke) -----
   const scheme = useDebounce(schemeInput);
+  const instrument = useDebounce(instrumentInput);
   const rating = useDebounce(ratingInput);
   const isin = useDebounce(isinInput);
   const from = useDebounce(fromInput);
   const to = useDebounce(toInput);
+
+  const quantityMinD = useDebounce(quantityMin);
+  const quantityMaxD = useDebounce(quantityMax);
+  const pctToNavMinD = useDebounce(pctToNavMin);
+  const pctToNavMaxD = useDebounce(pctToNavMax);
+  const ytmMinD = useDebounce(ytmMin);
+  const ytmMaxD = useDebounce(ytmMax);
+  const mvMinD = useDebounce(mvMin);
+  const mvMaxD = useDebounce(mvMax);
+
+  const modifiedFromD = useDebounce(modifiedFrom);
+  const modifiedToD = useDebounce(modifiedTo);
 
   // Data
   const [rows, setRows] = useState([]);
@@ -31,12 +60,49 @@ export default function ImportsTable() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  // Reset page to 1 when filters change
-  useEffect(() => { setPage(1); }, [scheme, rating, isin, from, to, limit]);
+  // Reset page to 1 when ANY filter changes
+  useEffect(() => {
+    setPage(1);
+  }, [
+    scheme, instrument, rating, isin,
+    from, to,
+    quantityMinD, quantityMaxD,
+    pctToNavMinD, pctToNavMaxD,
+    ytmMinD, ytmMaxD,
+    modifiedFromD, modifiedToD,
+    limit,mvMinD, mvMaxD, 
+  ]);
 
   const params = useMemo(() => ({
-    page, limit, scheme, rating, isin, from, to
-  }), [page, limit, scheme, rating, isin, from, to]);
+    page,
+    limit,
+    scheme,
+    instrument,
+    isin,
+    rating,
+    from,
+    to,
+    quantityMin: quantityMinD,
+    quantityMax: quantityMaxD,
+    pctToNavMin: pctToNavMinD,
+    pctToNavMax: pctToNavMaxD,
+    ytmMin: ytmMinD,
+    ytmMax: ytmMaxD,
+    modifiedFrom: modifiedFromD,
+    modifiedTo: modifiedToD,
+    mvMin: mvMinD,          
+    mvMax: mvMaxD,
+    // hideIncomplete: false, // keep false unless your DB is clean
+  }), [
+    page, limit,
+    scheme, instrument, isin, rating,
+    from, to,
+    quantityMinD, quantityMaxD,
+    pctToNavMinD, pctToNavMaxD,
+    ytmMinD, ytmMaxD,
+    modifiedFromD, modifiedToD,
+    mvMinD, mvMaxD,  
+  ]);
 
   useEffect(() => {
     let cancelled = false;
@@ -61,20 +127,49 @@ export default function ImportsTable() {
 
   const onReset = () => {
     setSchemeInput('');
+    setInstrumentInput('');
     setRatingInput('');
     setIsinInput('');
     setFromInput('');
     setToInput('');
+    setQuantityMin(null);
+    setQuantityMax(null);
+    setPctToNavMin(null);
+    setPctToNavMax(null);
+    setYtmMin(null);
+    setYtmMax(null);
+    setModifiedFrom('');
+    setModifiedTo('');
+    setMvMin(null);
+    setMvMax(null);
   };
 
   return (
     <div className={styles.wrapper}>
       <Filters
+        // text
         schemeInput={schemeInput} setSchemeInput={setSchemeInput}
+        instrumentInput={instrumentInput} setInstrumentInput={setInstrumentInput}
         ratingInput={ratingInput} setRatingInput={setRatingInput}
         isinInput={isinInput} setIsinInput={setIsinInput}
+
+        // ranges
+        quantityMin={quantityMin} setQuantityMin={setQuantityMin}
+        quantityMax={quantityMax} setQuantityMax={setQuantityMax}
+        pctToNavMin={pctToNavMin} setPctToNavMin={setPctToNavMin}
+        pctToNavMax={pctToNavMax} setPctToNavMax={setPctToNavMax}
+        ytmMin={ytmMin} setYtmMin={setYtmMin}
+        ytmMax={ytmMax} setYtmMax={setYtmMax}
+        mvMin={mvMin} setMvMin={setMvMin}       
+        mvMax={mvMax} setMvMax={setMvMax} 
+
+        // dates
         fromInput={fromInput} setFromInput={setFromInput}
         toInput={toInput} setToInput={setToInput}
+        modifiedFrom={modifiedFrom} setModifiedFrom={setModifiedFrom}
+        modifiedTo={modifiedTo} setModifiedTo={setModifiedTo}
+
+        // meta
         limit={limit} setLimit={setLimit}
         onReset={onReset}
         total={total}
@@ -87,47 +182,71 @@ export default function ImportsTable() {
         <div className={styles.tableScroll}>
           <table className={styles.table}>
             <thead className={styles.thead}>
-              <tr>{[
-                (<th key="h1" className={styles.th}>Scheme</th>),
-                (<th key="h2" className={styles.th}>Instrument</th>),
-                (<th key="h3" className={styles.th}>Quantity</th>),
-                (<th key="h4" className={styles.th}>% to NAV</th>),
-                (<th key="h5" className={styles.th}>Market Value (₹)</th>),
-                (<th key="h6" className={styles.th}>Report Date</th>),
-                (<th key="h7" className={styles.th}>ISIN</th>),
-                (<th key="h8" className={styles.th}>Rating</th>),
-                (<th key="h9" className={styles.th}>YTM</th>),
-                (<th key="h10" className={styles.th}>Modified</th>),
-              ]}</tr>
+              <tr>
+                <th className={styles.th}>Scheme</th>
+                <th className={styles.th}>Instrument</th>
+                <th className={styles.th}>Quantity</th>
+                <th className={styles.th}>% to NAV</th>
+                <th className={styles.th}>Market Value (₹)</th>
+                <th className={styles.th}>Report Date</th>
+                <th className={styles.th}>ISIN</th>
+                <th className={styles.th}>Rating</th>
+                <th className={styles.th}>YTM</th>
+                <th className={styles.th}>Modified</th>
+              </tr>
             </thead>
 
             <tbody>
               {loading ? (
                 Array.from({ length: 8 }).map((_, i) => (
-                  <tr key={`sk-${i}`} className={`${styles.tr} ${i % 2 ? styles.trOdd : ''}`}>{Array.from({ length: 10 }).map((__, j) => (<td key={j} className={styles.td}><div className={styles.skeleton} /></td>))}</tr>
+                  <tr key={`sk-${i}`} className={`${styles.tr} ${i % 2 ? styles.trOdd : ''}`}>
+                    {Array.from({ length: 10 }).map((__, j) => (
+                      <td key={j} className={styles.td}><div className={styles.skeleton} /></td>
+                    ))}
+                  </tr>
                 ))
               ) : rows.length === 0 ? (
-                <tr className={styles.tr}><td className={styles.td} colSpan={10} style={{ textAlign: 'center', padding: '24px 8px', opacity: 0.7 }}>No results found.</td></tr>
+                <tr className={styles.tr}>
+                  <td className={styles.td} colSpan={10} style={{ textAlign: 'center', padding: '24px 8px', opacity: 0.7 }}>
+                    No results found.
+                  </td>
+                </tr>
               ) : (
                 rows.map((r, i) => {
                   const modified = r._modifiedTime ? new Date(r._modifiedTime).toLocaleString() : '—';
                   const qty = (r.quantity ?? '—');
                   const pct = (r.pct_to_nav ?? r.pct_to_NAV ?? '—');
-                  const marketValue = r.market_value ? r.market_value : (r.market_value_lacs ? r.market_value_lacs * 100000 : '—');
+                  const marketValue = r.market_value
+                    ? r.market_value
+                    : (r.market_value_lacs ? r.market_value_lacs * 100000 : '—');
 
                   return (
-                    <tr key={r._id} className={`${styles.tr} ${i % 2 ? styles.trOdd : ''} ${styles.rowHover}`} title={`Scheme: ${r.scheme_name || '—'}\nInstrument: ${r.instrument_name || '—'}\nQuantity: ${qty}\n% to NAV: ${pct}\nMarket Value: ₹ ${marketValue === '—' ? '—' : Number(marketValue).toLocaleString('en-IN', { maximumFractionDigits: 2 })}\nISIN: ${r.isin || 'NA'}\nRating: ${r.rating || '—'}\nYTM: ${r.ytm ?? '—'}\nReport Date: ${r.report_date || '—'}`}>{[
-                      (<td key="c1" className={`${styles.td} ${styles.tdClamp}`} title={r.scheme_name || ''}><strong>{r.scheme_name || '—'}</strong></td>),
-                      (<td key="c2" className={`${styles.td} ${styles.tdClamp}`} title={r.instrument_name || ''}>{r.instrument_name || '—'}</td>),
-                      (<td key="c3" className={styles.td}>{qty}</td>),
-                      (<td key="c4" className={styles.td}>{pct}</td>),
-                      (<td key="c5" className={styles.td}>{marketValue === '—' ? '—' : `₹ ${Number(marketValue).toLocaleString('en-IN', { maximumFractionDigits: 2 })}`}</td>),
-                      (<td key="c6" className={styles.td}>{r.report_date || '—'}</td>),
-                      (<td key="c7" className={`${styles.td} ${styles.tdClamp}`} title={r.isin || ''}>{r.isin || 'NA'}</td>),
-                      (<td key="c8" className={styles.td}>{r.rating || '—'}</td>),
-                      (<td key="c9" className={styles.td}>{r.ytm ?? '—'}</td>),
-                      (<td key="c10" className={styles.td}>{modified}</td>),
-                    ]}</tr>
+                    <tr
+                      key={r._id}
+                      className={`${styles.tr} ${i % 2 ? styles.trOdd : ''} ${styles.rowHover}`}
+                      title={
+                        `Scheme: ${r.scheme_name || '—'}\n` +
+                        `Instrument: ${r.instrument_name || '—'}\n` +
+                        `Quantity: ${qty}\n` +
+                        `% to NAV: ${pct}\n` +
+                        `Market Value: ₹ ${marketValue === '—' ? '—' : Number(marketValue).toLocaleString('en-IN', { maximumFractionDigits: 2 })}\n` +
+                        `ISIN: ${r.isin || 'NA'}\n` +
+                        `Rating: ${r.rating || '—'}\n` +
+                        `YTM: ${r.ytm ?? '—'}\n` +
+                        `Report Date: ${r.report_date || '—'}`
+                      }
+                    >
+                      <td className={`${styles.td} ${styles.tdClamp}`} title={r.scheme_name || ''}><strong>{r.scheme_name || '—'}</strong></td>
+                      <td className={`${styles.td} ${styles.tdClamp}`} title={r.instrument_name || ''}>{r.instrument_name || '—'}</td>
+                      <td className={styles.td}>{qty}</td>
+                      <td className={styles.td}>{pct}</td>
+                      <td className={styles.td}>{marketValue === '—' ? '—' : `₹ ${Number(marketValue).toLocaleString('en-IN', { maximumFractionDigits: 2 })}`}</td>
+                      <td className={styles.td}>{r.report_date || '—'}</td>
+                      <td className={`${styles.td} ${styles.tdClamp}`} title={r.isin || ''}>{r.isin || 'NA'}</td>
+                      <td className={styles.td}>{r.rating || '—'}</td>
+                      <td className={styles.td}>{r.ytm ?? '—'}</td>
+                      <td className={styles.td}>{modified}</td>
+                    </tr>
                   );
                 })
               )}
@@ -140,52 +259,3 @@ export default function ImportsTable() {
     </div>
   );
 }
-
-/** ------- helpers ------- */
-const fmtMarketValue = (value) => {
-  if (value === null || value === undefined) return '—';
-  return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(value);
-};
-
-const fmtNum = (n, opts = {}) =>
-  typeof n === 'number'
-    ? n.toLocaleString(undefined, { maximumFractionDigits: 2, ...opts })
-    : n != null && !Number.isNaN(Number(n))
-      ? Number(n).toLocaleString(undefined, { maximumFractionDigits: 2, ...opts })
-      : '—';
-
-const fmtInt = (n) =>
-  typeof n === 'number'
-    ? Math.round(n).toLocaleString()
-    : n != null && !Number.isNaN(Number(n))
-      ? Math.round(Number(n)).toLocaleString()
-      : '—';
-
-const fmtPct = (v, digits = 2) => {
-  if (v == null) return '—';
-  const num = Number(v);
-  if (Number.isNaN(num)) return '—';
-  return `${(num * 100).toFixed(digits)}%`;
-};
-
-const fmtYTM = (v) => {
-  if (v == null) return '—';
-  const num = Number(v);
-  if (Number.isNaN(num)) return '—';
-  return `${(num * 100).toFixed(4)}%`;
-};
-
-const fmtDate = (report_date, modifiedISO) => {
-  if (typeof report_date === 'string' && report_date.trim()) {
-    return report_date.replace(/,(\d)/, ', $1');
-  }
-  if (typeof modifiedISO === 'string' && /^\d{4}-\d{2}-\d{2}T/.test(modifiedISO)) {
-    try {
-      const d = new Date(modifiedISO);
-      return d.toLocaleString();
-    } catch {}
-  }
-  return '—';
-};
-
-
