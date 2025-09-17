@@ -7,21 +7,13 @@ router.get('/', (req, res) => {
 
 // Login endpoint
 router.post('/login', (req, res) => {
-    const { email, password } = req.body;
-    
-    // Check credentials
-    if (email === process.env.EMAIL && password === process.env.PASSWORD) {
-        res.json({
-            success: true,
-            token: 'authenticated',
-            message: 'Login successful'
-        });
-    } else {
-        res.status(401).json({
-            success: false,
-            message: 'Invalid credentials'
-        });
-    }
+  const { email, password } = req.body;
+
+  if (email === process.env.EMAIL && password === process.env.PASSWORD) {
+    return res.json({ success: true, token: 'authenticated', message: 'Login successful' });
+  }
+
+  return res.status(401).json({ success: false, message: 'Invalid credentials' });
 });
 
 module.exports = router;

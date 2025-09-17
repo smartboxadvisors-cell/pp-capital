@@ -4,11 +4,7 @@
   "description": "",
   "main": "server.js",
   "scripts": {
-    "dev": "nodemon server.js",
-    "start": "node server.js"
-  },
-  "engines": {
-    "node": ">=14.0.0"
+    "dev": "nodemon server.js"
   },
   "keywords": [],
   "author": "",
