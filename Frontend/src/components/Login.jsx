@@ -34,11 +34,18 @@ const Login = () => {
                 body: JSON.stringify({ email: email.trim(), password }),
             });
 
+            // Handle non-JSON responses
+            const contentType = response.headers.get('content-type');
+            if (!contentType || !contentType.includes('application/json')) {
+                throw new Error('Server returned non-JSON response. Check if backend is running.');
+            }
+
             const data = await response.json();
 
             if (data.success) {
                 // Store authentication token
                 localStorage.setItem('token', data.token);
+                console.log('Login successful, redirecting...');
                 // Redirect to main page
                 navigate('/');
             } else {
