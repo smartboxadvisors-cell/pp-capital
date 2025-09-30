@@ -3,6 +3,9 @@ import { useState, useRef, useCallback, useEffect } from 'react';
 import styles from '../styles/table.module.css';
 
 export default function ResizableTable({ rows, loading }) {
+  // View mode state
+  const [viewMode, setViewMode] = useState('compact'); // 'compact', 'expanded', 'auto', 'fit-window'
+  
   // Column widths state
   const [columnWidths, setColumnWidths] = useState({
     scheme: 200,
@@ -19,6 +22,14 @@ export default function ResizableTable({ rows, loading }) {
 
   // Row heights state
   const [rowHeights, setRowHeights] = useState({});
+  
+  // Auto-calculated dimensions based on content
+  const [autoColumnWidths, setAutoColumnWidths] = useState({});
+  const [autoRowHeights, setAutoRowHeights] = useState({});
+  
+  // Window-fit dimensions
+  const [windowFitWidths, setWindowFitWidths] = useState({});
+  const [availableWidth, setAvailableWidth] = useState(0);
 
   // Resize state
   const [isResizing, setIsResizing] = useState(false);
@@ -114,6 +125,132 @@ export default function ResizableTable({ rows, loading }) {
     };
   }, [isResizing, handleMouseMove, handleMouseUp, resizeData]);
 
+  // Calculate optimal dimensions based on content
+  const calculateOptimalDimensions = useCallback(() => {
+    if (!tableRef.current || !rows.length) return;
+    
+    const newAutoColumnWidths = {};
+    const newAutoRowHeights = {};
+    
+    // Calculate column widths based on content
+    columns.forEach(column => {
+      const cells = tableRef.current.querySelectorAll(`[data-column="${column.key}"]`);
+      let maxWidth = 80; // Minimum width
+      
+      cells.forEach(cell => {
+        const content = cell.textContent || '';
+        // Estimate width based on content length and font size
+        const estimatedWidth = Math.max(
+          content.length * 8 + 20, // 8px per character + padding
+          column.label.length * 10 + 20 // Header width
+        );
+        maxWidth = Math.max(maxWidth, estimatedWidth);
+      });
+      
+      newAutoColumnWidths[column.key] = Math.min(maxWidth, 500); // Cap at 500px
+    });
+    
+    // Calculate row heights based on content
+    rows.forEach((row, index) => {
+      let maxHeight = 40; // Minimum height
+      
+      columns.forEach(column => {
+        const content = formatCellValue(row, column);
+        const contentLength = String(content).length;
+        
+        // Estimate height based on content length and column width
+        const columnWidth = newAutoColumnWidths[column.key] || columnWidths[column.key];
+        const estimatedLines = Math.ceil(contentLength * 8 / (columnWidth - 20));
+        const estimatedHeight = Math.max(40, estimatedLines * 20 + 10);
+        
+        maxHeight = Math.max(maxHeight, estimatedHeight);
+      });
+      
+      newAutoRowHeights[index] = Math.min(maxHeight, 200); // Cap at 200px
+    });
+    
+    setAutoColumnWidths(newAutoColumnWidths);
+    setAutoRowHeights(newAutoRowHeights);
+  }, [rows, columns, columnWidths]);
+
+  // Calculate window-fit dimensions
+  const calculateWindowFitDimensions = useCallback(() => {
+    if (!tableRef.current) return;
+    
+    const tableContainer = tableRef.current.closest(`.${styles.tableScroll}`);
+    if (!tableContainer) return;
+    
+    const containerWidth = tableContainer.clientWidth;
+    const scrollbarWidth = 20; // Account for potential scrollbar
+    const padding = 40; // Account for padding and borders
+    const usableWidth = containerWidth - scrollbarWidth - padding;
+    
+    setAvailableWidth(usableWidth);
+    
+    // Define column priorities and minimum widths
+    const columnPriorities = {
+      scheme: { priority: 1, minWidth: 120, idealRatio: 0.25 },
+      instrument: { priority: 2, minWidth: 100, idealRatio: 0.20 },
+      marketValue: { priority: 3, minWidth: 80, idealRatio: 0.15 },
+      isin: { priority: 4, minWidth: 80, idealRatio: 0.12 },
+      rating: { priority: 5, minWidth: 60, idealRatio: 0.08 },
+      quantity: { priority: 6, minWidth: 60, idealRatio: 0.08 },
+      pctToNav: { priority: 7, minWidth: 60, idealRatio: 0.08 },
+      reportDate: { priority: 8, minWidth: 70, idealRatio: 0.10 },
+      ytm: { priority: 9, minWidth: 50, idealRatio: 0.06 },
+      modified: { priority: 10, minWidth: 80, idealRatio: 0.12 }
+    };
+    
+    // Calculate total minimum width needed
+    const totalMinWidth = Object.values(columnPriorities).reduce((sum, col) => sum + col.minWidth, 0);
+    
+    const newWindowFitWidths = {};
+    
+    if (usableWidth >= totalMinWidth) {
+      // We have enough space, distribute proportionally
+      let remainingWidth = usableWidth;
+      
+      // First pass: assign minimum widths
+      columns.forEach(column => {
+        const colConfig = columnPriorities[column.key];
+        newWindowFitWidths[column.key] = colConfig.minWidth;
+        remainingWidth -= colConfig.minWidth;
+      });
+      
+      // Second pass: distribute remaining width based on ideal ratios
+      const totalIdealRatio = Object.values(columnPriorities).reduce((sum, col) => sum + col.idealRatio, 0);
+      
+      columns.forEach(column => {
+        const colConfig = columnPriorities[column.key];
+        const additionalWidth = Math.floor((remainingWidth * colConfig.idealRatio) / totalIdealRatio);
+        newWindowFitWidths[column.key] += additionalWidth;
+      });
+      
+      // Handle any remaining pixels due to rounding
+      const totalAssigned = Object.values(newWindowFitWidths).reduce((sum, width) => sum + width, 0);
+      const leftover = usableWidth - totalAssigned;
+      if (leftover > 0) {
+        // Give leftover pixels to the highest priority column
+        newWindowFitWidths.scheme += leftover;
+      }
+    } else {
+      // Not enough space, use minimum widths and let it scroll
+      columns.forEach(column => {
+        const colConfig = columnPriorities[column.key];
+        newWindowFitWidths[column.key] = colConfig.minWidth;
+      });
+    }
+    
+    setWindowFitWidths(newWindowFitWidths);
+  }, [columns]);
+
+  // Handle window resize
+  const handleWindowResize = useCallback(() => {
+    if (viewMode === 'fit-window') {
+      calculateWindowFitDimensions();
+    }
+  }, [viewMode, calculateWindowFitDimensions]);
+
   // Auto-fit column to content
   const autoFitColumn = useCallback((columnKey) => {
     if (!tableRef.current) return;
@@ -131,6 +268,62 @@ export default function ResizableTable({ rows, loading }) {
       [columnKey]: Math.min(maxWidth, 400) // Cap at 400px
     }));
   }, []);
+
+  // Auto-fit all columns
+  const autoFitAllColumns = useCallback(() => {
+    columns.forEach(column => {
+      autoFitColumn(column.key);
+    });
+  }, [columns, autoFitColumn]);
+
+  // Get effective dimensions based on view mode
+  const getEffectiveColumnWidth = useCallback((columnKey) => {
+    switch (viewMode) {
+      case 'auto':
+        return autoColumnWidths[columnKey] || columnWidths[columnKey];
+      case 'expanded':
+        return Math.max(columnWidths[columnKey], 200);
+      case 'fit-window':
+        return windowFitWidths[columnKey] || columnWidths[columnKey];
+      default:
+        return columnWidths[columnKey];
+    }
+  }, [viewMode, autoColumnWidths, columnWidths, windowFitWidths]);
+
+  const getEffectiveRowHeight = useCallback((rowIndex) => {
+    switch (viewMode) {
+      case 'auto':
+        return autoRowHeights[rowIndex] || rowHeights[rowIndex] || 'auto';
+      case 'expanded':
+        return Math.max(rowHeights[rowIndex] || 60, 60);
+      default:
+        return rowHeights[rowIndex] || 'auto';
+    }
+  }, [viewMode, autoRowHeights, rowHeights]);
+
+  // Calculate dimensions when data changes
+  useEffect(() => {
+    if (viewMode === 'auto' && rows.length > 0) {
+      // Delay calculation to ensure DOM is updated
+      const timer = setTimeout(calculateOptimalDimensions, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [rows, viewMode, calculateOptimalDimensions]);
+
+  // Calculate window-fit dimensions when needed
+  useEffect(() => {
+    if (viewMode === 'fit-window') {
+      // Delay calculation to ensure DOM is updated
+      const timer = setTimeout(calculateWindowFitDimensions, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [viewMode, calculateWindowFitDimensions]);
+
+  // Add window resize listener
+  useEffect(() => {
+    window.addEventListener('resize', handleWindowResize);
+    return () => window.removeEventListener('resize', handleWindowResize);
+  }, [handleWindowResize]);
 
   // Format cell value
   const formatCellValue = (row, column) => {
@@ -155,15 +348,65 @@ export default function ResizableTable({ rows, loading }) {
 
   return (
     <div className={styles.card}>
+      {/* View Mode Controls */}
+      <div className={styles.tableControls}>
+        <div className={styles.viewModeControls}>
+          <label className={styles.controlLabel}>View Mode:</label>
+          <div className={styles.buttonGroup}>
+            <button
+              className={`${styles.modeButton} ${viewMode === 'compact' ? styles.active : ''}`}
+              onClick={() => setViewMode('compact')}
+              title="Compact view - minimal space"
+            >
+              Compact
+            </button>
+            <button
+              className={`${styles.modeButton} ${viewMode === 'expanded' ? styles.active : ''}`}
+              onClick={() => setViewMode('expanded')}
+              title="Expanded view - more space for content"
+            >
+              Expanded
+            </button>
+            <button
+              className={`${styles.modeButton} ${viewMode === 'auto' ? styles.active : ''}`}
+              onClick={() => setViewMode('auto')}
+              title="Auto view - size based on content"
+            >
+              Auto-fit
+            </button>
+            <button
+              className={`${styles.modeButton} ${viewMode === 'fit-window' ? styles.active : ''}`}
+              onClick={() => setViewMode('fit-window')}
+              title="Fit to window - all columns fit in viewport width"
+            >
+              Fit Window
+            </button>
+          </div>
+        </div>
+        <div className={styles.tableActions}>
+          <button
+            className={styles.actionButton}
+            onClick={autoFitAllColumns}
+            title="Auto-fit all columns to content"
+          >
+            Auto-fit All
+          </button>
+        </div>
+      </div>
+      
       <div className={styles.tableScroll}>
-        <table ref={tableRef} className={`${styles.table} ${styles.resizableTable}`}>
+        <table ref={tableRef} className={`${styles.table} ${styles.resizableTable} ${
+          viewMode === 'fit-window' ? styles.fitWindowMode : 
+          viewMode === 'expanded' ? styles.expandedMode :
+          viewMode === 'auto' ? styles.autoMode : ''
+        }`}>
           <thead className={styles.thead}>
             <tr>
               {columns.map((column, index) => (
                 <th
                   key={column.key}
                   className={`${styles.th} ${styles.resizableTh}`}
-                  style={{ width: columnWidths[column.key] }}
+                  style={{ width: getEffectiveColumnWidth(column.key) }}
                   data-column={column.key}
                 >
                   <div className={styles.thContent}>
@@ -192,14 +435,14 @@ export default function ResizableTable({ rows, loading }) {
                 <tr 
                   key={`sk-${i}`} 
                   className={`${styles.tr} ${i % 2 ? styles.trOdd : ''}`}
-                  style={{ height: rowHeights[i] || 'auto' }}
+                  style={{ height: getEffectiveRowHeight(i) }}
                 >
                     {columns.map((column, colIndex) => (
                       <td 
                         key={column.key} 
-                        className={styles.td}
+                        className={`${styles.td} ${viewMode !== 'compact' ? styles.tdExpanded : ''}`}
                         style={{ 
-                          width: columnWidths[column.key],
+                          width: getEffectiveColumnWidth(column.key),
                           position: colIndex === columns.length - 1 ? 'relative' : 'static'
                         }}
                         data-column={column.key}
@@ -234,7 +477,7 @@ export default function ResizableTable({ rows, loading }) {
                   <tr
                     key={row._id}
                     className={`${styles.tr} ${i % 2 ? styles.trOdd : ''} ${styles.rowHover} ${styles.resizableRow}`}
-                    style={{ height: rowHeight }}
+                    style={{ height: getEffectiveRowHeight(i) }}
                     title={
                       `Scheme: ${row.scheme_name || '—'}\n` +
                       `Instrument: ${row.instrument_name || '—'}\n` +
@@ -250,16 +493,20 @@ export default function ResizableTable({ rows, loading }) {
                     {columns.map((column, colIndex) => (
                       <td
                         key={column.key}
-                        className={`${styles.td} ${column.key === 'scheme' || column.key === 'instrument' || column.key === 'isin' ? styles.tdClamp : ''}`}
+                        className={`${styles.td} ${
+                          viewMode === 'compact' && (column.key === 'scheme' || column.key === 'instrument' || column.key === 'isin') 
+                            ? styles.tdClamp 
+                            : styles.tdExpanded
+                        }`}
                         style={{ 
-                          width: columnWidths[column.key],
-                          maxWidth: columnWidths[column.key],
+                          width: getEffectiveColumnWidth(column.key),
+                          maxWidth: getEffectiveColumnWidth(column.key),
                           position: colIndex === columns.length - 1 ? 'relative' : 'static'
                         }}
                         data-column={column.key}
-                        title={column.key === 'scheme' || column.key === 'instrument' || column.key === 'isin' ? formatCellValue(row, column) : ''}
+                        title={viewMode === 'compact' ? formatCellValue(row, column) : ''}
                       >
-                        <div className={styles.cellContent}>
+                        <div className={`${styles.cellContent} ${viewMode !== 'compact' ? styles.cellContentExpanded : ''}`}>
                           {column.key === 'scheme' ? (
                             <strong>{formatCellValue(row, column)}</strong>
                           ) : (
