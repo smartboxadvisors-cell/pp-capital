@@ -37,6 +37,7 @@ router.get('/imports', async (req, res) => {
       instrument   = '',
       isin         = '',
       rating       = '',
+      ratings,
       from         = '',  // report date from (yyyy-mm-dd)
       to           = '',  // report date to   (yyyy-mm-dd)
       quantityMin,
@@ -76,7 +77,12 @@ router.get('/imports', async (req, res) => {
     addRegex('scheme_name', scheme);
     addRegex('instrument_name', instrument);
     addRegex('isin', isin);
-    if (rating) {
+    if (Array.isArray(ratings) && ratings.length > 0) {
+      // OR of multiple starts-with regexes
+      filter.$or = ratings
+        .filter(v => String(v).trim())
+        .map(v => ({ rating: { $regex: `^${String(v).trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`, $options: 'i' } }));
+    } else if (rating) {
       filter.rating = {
         $regex: `^${rating.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`,
         $options: 'i',

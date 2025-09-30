@@ -62,7 +62,7 @@ export async function fetchImports(
     scheme = '',
     instrument = '',
     isin = '',
-    rating = '',
+    ratings = [],
 
     from = '',
     to = '',
@@ -95,7 +95,13 @@ export async function fetchImports(
   setIfPresent(params, 'scheme', scheme);
   setIfPresent(params, 'instrument', instrument);
   setIfPresent(params, 'isin', isin);
-  setIfPresent(params, 'rating', rating);
+  // Send multiple ratings as repeated query params: ratings=A&ratings=B
+  if (Array.isArray(ratings) && ratings.length > 0) {
+    ratings.forEach(r => {
+      const v = typeof r === 'string' ? r.trim() : String(r);
+      if (v) params.append('ratings', v);
+    });
+  }
 
   setIfPresent(params, 'from', from);
   setIfPresent(params, 'to', to);

@@ -14,7 +14,7 @@ export default function ImportsTable() {
   // ----- Controlled inputs (all fields) -----
   const [schemeInput, setSchemeInput] = useState('');
   const [instrumentInput, setInstrumentInput] = useState('');
-  const [ratingInput, setRatingInput] = useState('');
+  const [ratingsInput, setRatingsInput] = useState([]);
   const [isinInput, setIsinInput] = useState('');
   const [fromInput, setFromInput] = useState(''); // report date from (yyyy-mm-dd)
   const [toInput, setToInput] = useState('');     // report date to   (yyyy-mm-dd)
@@ -36,7 +36,7 @@ export default function ImportsTable() {
   // ----- Debounced values (to avoid refetch every keystroke) -----
   const scheme = useDebounce(schemeInput);
   const instrument = useDebounce(instrumentInput);
-  const rating = useDebounce(ratingInput);
+  const ratings = useDebounce(ratingsInput);
   const isin = useDebounce(isinInput);
   const from = useDebounce(fromInput);
   const to = useDebounce(toInput);
@@ -64,7 +64,7 @@ export default function ImportsTable() {
   useEffect(() => {
     setPage(1);
   }, [
-    scheme, instrument, rating, isin,
+    scheme, instrument, ratings, isin,
     from, to,
     quantityMinD, quantityMaxD,
     pctToNavMinD, pctToNavMaxD,
@@ -79,7 +79,7 @@ export default function ImportsTable() {
     scheme,
     instrument,
     isin,
-    rating,
+    ratings,
     from,
     to,
     quantityMin: quantityMinD,
@@ -95,7 +95,7 @@ export default function ImportsTable() {
     // hideIncomplete: false, // keep false unless your DB is clean
   }), [
     page, limit,
-    scheme, instrument, isin, rating,
+    scheme, instrument, isin, ratings,
     from, to,
     quantityMinD, quantityMaxD,
     pctToNavMinD, pctToNavMaxD,
@@ -128,7 +128,7 @@ export default function ImportsTable() {
   const onReset = () => {
     setSchemeInput('');
     setInstrumentInput('');
-    setRatingInput('');
+    setRatingsInput([]);
     setIsinInput('');
     setFromInput('');
     setToInput('');
@@ -150,7 +150,7 @@ export default function ImportsTable() {
         // text
         schemeInput={schemeInput} setSchemeInput={setSchemeInput}
         instrumentInput={instrumentInput} setInstrumentInput={setInstrumentInput}
-        ratingInput={ratingInput} setRatingInput={setRatingInput}
+        ratingsInput={ratingsInput} setRatingsInput={setRatingsInput}
         isinInput={isinInput} setIsinInput={setIsinInput}
 
         // ranges

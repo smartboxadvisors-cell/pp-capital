@@ -37,7 +37,7 @@ export default function Filters({
   isinInput, setIsinInput,
 
   // Rating
-  ratingInput, setRatingInput,
+  ratingsInput, setRatingsInput,
 
   // Number ranges
   quantityMin, setQuantityMin,
@@ -103,19 +103,46 @@ export default function Filters({
           />
         </div>
 
-        {/* Rating */}
+        {/* Rating (multi-select) */}
         <div className={styles.field}>
           <label className={styles.label}>Rating</label>
-          <select
-            className={styles.select}
-            value={ratingInput}
-            onChange={(e) => setRatingInput(e.target.value)}
+          <div
+            className={styles.checkboxGroup}
             title="Matches even if data has suffixes like (CE), (SO), outlook, or agency tags."
           >
-            {RATING_OPTIONS.map(r => (
-              <option key={r} value={r === 'ALL' ? '' : r}>{r}</option>
-            ))}
-          </select>
+            {RATING_OPTIONS.filter(r => r !== 'ALL').map(r => {
+              const checked = Array.isArray(ratingsInput) && ratingsInput.includes(r);
+              return (
+                <label key={r} className={styles.checkboxItem}>
+                  <input
+                    type="checkbox"
+                    checked={checked}
+                    onChange={(e) => {
+                      const isChecked = e.target.checked;
+                      setRatingsInput(prev => {
+                        const prior = Array.isArray(prev) ? prev : [];
+                        if (isChecked) {
+                          if (prior.includes(r)) return prior;
+                          return [...prior, r];
+                        }
+                        return prior.filter(x => x !== r);
+                      });
+                    }}
+                  />
+                  <span>{r}</span>
+                </label>
+              );
+            })}
+          </div>
+          <div className={styles.actionsRow}>
+            <button
+              type="button"
+              className={styles.ghostBtn}
+              onClick={() => setRatingsInput([])}
+            >
+              Clear ratings
+            </button>
+          </div>
         </div>
 
         {/* Quantity (Min/Max) */}
