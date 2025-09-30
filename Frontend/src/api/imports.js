@@ -63,6 +63,7 @@ export async function fetchImports(
     instrument = '',
     isin = '',
     rating = '',
+    ratings = [], // NEW: array of ratings for multi-select
 
     from = '',
     to = '',
@@ -77,7 +78,7 @@ export async function fetchImports(
     modifiedFrom = '',
     modifiedTo = '',
 
-    // IMPORTANT: default FALSE so we don’t accidentally filter out everything
+    // IMPORTANT: default FALSE so we don't accidentally filter out everything
     hideIncomplete = false,
 
     // optional hooks
@@ -95,7 +96,19 @@ export async function fetchImports(
   setIfPresent(params, 'scheme', scheme);
   setIfPresent(params, 'instrument', instrument);
   setIfPresent(params, 'isin', isin);
-  setIfPresent(params, 'rating', rating);
+  
+  // Handle multiple ratings (NEW)
+  if (Array.isArray(ratings) && ratings.length > 0) {
+    // Send multiple ratings as separate query parameters
+    ratings.forEach(r => {
+      if (r && r.trim()) {
+        params.append('ratings', r.trim());
+      }
+    });
+  } else if (rating) {
+    // Fallback to single rating for backward compatibility
+    setIfPresent(params, 'rating', rating);
+  }
 
   setIfPresent(params, 'from', from);
   setIfPresent(params, 'to', to);
@@ -137,7 +150,7 @@ export async function fetchImports(
       if (items.length > 0 || total > 0 || json.ok) {
         return { items, total, totalPages };
       }
-      // If empty here, still return—caller can show “No results”.
+      // If empty here, still return—caller can show "No results".
       return { items, total, totalPages };
     } catch (e) {
       lastErr = e;

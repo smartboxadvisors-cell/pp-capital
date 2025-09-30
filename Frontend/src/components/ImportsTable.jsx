@@ -14,7 +14,7 @@ export default function ImportsTable() {
   // ----- Controlled inputs (all fields) -----
   const [schemeInput, setSchemeInput] = useState('');
   const [instrumentInput, setInstrumentInput] = useState('');
-  const [ratingInput, setRatingInput] = useState('');
+  const [ratings, setRatings] = useState([]); // Changed from ratingInput to ratings array
   const [isinInput, setIsinInput] = useState('');
   const [fromInput, setFromInput] = useState(''); // report date from (yyyy-mm-dd)
   const [toInput, setToInput] = useState('');     // report date to   (yyyy-mm-dd)
@@ -36,7 +36,7 @@ export default function ImportsTable() {
   // ----- Debounced values (to avoid refetch every keystroke) -----
   const scheme = useDebounce(schemeInput);
   const instrument = useDebounce(instrumentInput);
-  const rating = useDebounce(ratingInput);
+  const ratingsDebounced = useDebounce(ratings); // Debounce the ratings array
   const isin = useDebounce(isinInput);
   const from = useDebounce(fromInput);
   const to = useDebounce(toInput);
@@ -64,13 +64,13 @@ export default function ImportsTable() {
   useEffect(() => {
     setPage(1);
   }, [
-    scheme, instrument, rating, isin,
+    scheme, instrument, ratingsDebounced, isin,
     from, to,
     quantityMinD, quantityMaxD,
     pctToNavMinD, pctToNavMaxD,
     ytmMinD, ytmMaxD,
     modifiedFromD, modifiedToD,
-    limit,mvMinD, mvMaxD, 
+    limit, mvMinD, mvMaxD, 
   ]);
 
   const params = useMemo(() => ({
@@ -79,7 +79,7 @@ export default function ImportsTable() {
     scheme,
     instrument,
     isin,
-    rating,
+    ratings: ratingsDebounced, // Pass ratings array instead of single rating
     from,
     to,
     quantityMin: quantityMinD,
@@ -95,7 +95,7 @@ export default function ImportsTable() {
     // hideIncomplete: false, // keep false unless your DB is clean
   }), [
     page, limit,
-    scheme, instrument, isin, rating,
+    scheme, instrument, isin, ratingsDebounced,
     from, to,
     quantityMinD, quantityMaxD,
     pctToNavMinD, pctToNavMaxD,
@@ -128,7 +128,7 @@ export default function ImportsTable() {
   const onReset = () => {
     setSchemeInput('');
     setInstrumentInput('');
-    setRatingInput('');
+    setRatings([]); // Reset ratings array
     setIsinInput('');
     setFromInput('');
     setToInput('');
@@ -150,7 +150,7 @@ export default function ImportsTable() {
         // text
         schemeInput={schemeInput} setSchemeInput={setSchemeInput}
         instrumentInput={instrumentInput} setInstrumentInput={setInstrumentInput}
-        ratingInput={ratingInput} setRatingInput={setRatingInput}
+        ratings={ratings} setRatings={setRatings} // Pass ratings array instead of ratingInput
         isinInput={isinInput} setIsinInput={setIsinInput}
 
         // ranges

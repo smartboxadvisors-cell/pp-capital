@@ -1,6 +1,6 @@
 .wrapper {
-  max-width: 1200px;
-  margin: 28px auto;
+  width: 100%;
+  margin: 28px 0;
   padding: 0 16px;
   font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
   color: #0f172a;
@@ -22,10 +22,14 @@
   margin-bottom: 10px;
 }
 
-.tableScroll { overflow: auto; }
+.tableScroll {
+  width: 100%;
+  overflow: auto;
+}
 
 .table {
   width: 100%;
+  min-width: 100%;
   border-collapse: separate;
   border-spacing: 0;
   table-layout: fixed;
@@ -53,12 +57,59 @@
   background: #f8fafc;
 }
 
+.thContent {
+  display: flex;
+  align-items: center;
+  position: relative;
+  gap: 8px;
+  height: 100%;
+}
+
+.thLabel {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.resizeHandle {
+  position: absolute;
+  top: 0;
+  right: -4px;
+  width: 8px;
+  height: 100%;
+  cursor: col-resize;
+  user-select: none;
+  touch-action: none;
+}
+
+.resizeHandle::after {
+  content: '';
+  position: absolute;
+  top: 12px;
+  bottom: 12px;
+  left: 3px;
+  width: 1px;
+  background: transparent;
+  transition: background 0.2s ease;
+}
+
+.th:hover .resizeHandle::after,
+.resizeHandle:active::after {
+  background: #cbd5f5;
+}
+
 .td {
   padding: 12px 12px;
   border-bottom: 1px solid #f1f5f9;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.tr {
+  position: relative;
+  transition: background .12s ease;
 }
 
 .trOdd { background: #fcfcfd; }
@@ -72,15 +123,17 @@
   animation: sk 1.2s ease-in-out infinite;
   border-radius: 6px;
 }
-.tr { transition: background .12s ease; }
-.rowHover:hover { background: #f8fafc; }
+
+.rowHover:hover {
+  background: #f8fafc;
+  outline: 1px solid #e2e8f0;
+}
 
 /* Clamp long text by default */
 .tdClamp {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  max-width: 260px; /* tweak as needed */
 }
 
 /* On row hover, unwrap to see full data clearly */
@@ -91,8 +144,41 @@
   z-index: 1; /* keep above neighbors if needed */
 }
 
-/* Optional: slightly elevate hovered row for readability */
-.rowHover:hover {
+.rowHandleRow td {
+  padding: 0;
+  border: none;
+  height: 0;
   position: relative;
-  outline: 1px solid #e2e8f0;
+}
+
+.rowResizeHandle {
+  display: block;
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: -4px;
+  height: 10px;
+  cursor: row-resize;
+  user-select: none;
+  touch-action: none;
+}
+
+.rowResizeHandle::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  top: 4px;
+  width: 80px;
+  height: 2px;
+  background: transparent;
+  transition: background 0.2s ease;
+}
+
+.rowHandleRow:hover .rowResizeHandle::after,
+.rowResizeHandle:active::after {
+  background: #cbd5f5;
+}
+.rowHandleRow {
+  background: transparent;
 }

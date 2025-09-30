@@ -37,6 +37,7 @@ router.get('/imports', async (req, res) => {
       instrument   = '',
       isin         = '',
       rating       = '',
+      ratings      = [],  // NEW: array of ratings for multi-select
       from         = '',  // report date from (yyyy-mm-dd)
       to           = '',  // report date to   (yyyy-mm-dd)
       quantityMin,
@@ -76,12 +77,24 @@ router.get('/imports', async (req, res) => {
     addRegex('scheme_name', scheme);
     addRegex('instrument_name', instrument);
     addRegex('isin', isin);
-    if (rating) {
+    
+    // Handle multiple ratings (NEW)
+    const ratingsArray = Array.isArray(ratings) ? ratings : 
+                        (typeof ratings === 'string' && ratings ? [ratings] : []);
+    
+    if (ratingsArray.length > 0) {
+      // Use $in for multiple ratings with regex patterns
       filter.rating = {
-        $regex: `^${rating.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`,
+        $in: ratingsArray.map(r => new RegExp(`^${escapeRegex(r)}`, 'i'))
+      };
+    } else if (rating) {
+      // Fallback to single rating for backward compatibility
+      filter.rating = {
+        $regex: `^${escapeRegex(rating)}`,
         $options: 'i',
       };
     }
+    
     // numeric ranges
     addRange('quantity',   quantityMin, quantityMax, Number);
     addRange('pct_to_nav', pctToNavMin, pctToNavMax, Number);

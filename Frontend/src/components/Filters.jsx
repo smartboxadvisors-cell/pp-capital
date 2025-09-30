@@ -3,8 +3,6 @@ import styles from '../styles/filters.module.css';
 
 // Broad ratings list used by Indian MFs (long/short term + variants + Sovereign)
 const RATING_OPTIONS = [
-  'ALL',
-
   // Sovereign / G-Sec style
   'Sovereign', 'SOVEREIGN', 'SOV',
 
@@ -36,8 +34,8 @@ export default function Filters({
   instrumentInput, setInstrumentInput,   // plain input only
   isinInput, setIsinInput,
 
-  // Rating
-  ratingInput, setRatingInput,
+  // Rating (changed from single to multiple)
+  ratings, setRatings,
 
   // Number ranges
   quantityMin, setQuantityMin,
@@ -62,6 +60,21 @@ export default function Filters({
   onReset,
   total, loading
 }) {
+  
+  // Handle checkbox changes for ratings
+  const handleRatingChange = (rating, checked) => {
+    if (checked) {
+      setRatings([...ratings, rating]);
+    } else {
+      setRatings(ratings.filter(r => r !== rating));
+    }
+  };
+
+  // Clear all ratings
+  const clearRatings = () => {
+    setRatings([]);
+  };
+
   return (
     <div className={styles.card}>
       <div className={styles.header}>
@@ -103,19 +116,34 @@ export default function Filters({
           />
         </div>
 
-        {/* Rating */}
-        <div className={styles.field}>
-          <label className={styles.label}>Rating</label>
-          <select
-            className={styles.select}
-            value={ratingInput}
-            onChange={(e) => setRatingInput(e.target.value)}
-            title="Matches even if data has suffixes like (CE), (SO), outlook, or agency tags."
-          >
-            {RATING_OPTIONS.map(r => (
-              <option key={r} value={r === 'ALL' ? '' : r}>{r}</option>
+        {/* Rating - Multi-select checkboxes */}
+        <div className={styles.field} style={{ gridColumn: 'span 3' }}>
+          <div className={styles.ratingHeader}>
+            <label className={styles.label}>Rating</label>
+            {ratings.length > 0 && (
+              <button 
+                type="button" 
+                onClick={clearRatings}
+                className={styles.clearBtn}
+                title="Clear all selected ratings"
+              >
+                Clear ratings ({ratings.length})
+              </button>
+            )}
+          </div>
+          <div className={styles.checkboxGrid}>
+            {RATING_OPTIONS.map(rating => (
+              <label key={rating} className={styles.checkboxLabel}>
+                <input
+                  type="checkbox"
+                  className={styles.checkbox}
+                  checked={ratings.includes(rating)}
+                  onChange={(e) => handleRatingChange(rating, e.target.checked)}
+                />
+                <span className={styles.checkboxText}>{rating}</span>
+              </label>
             ))}
-          </select>
+          </div>
         </div>
 
         {/* Quantity (Min/Max) */}
