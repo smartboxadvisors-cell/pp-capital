@@ -182,3 +182,107 @@
 .rowHandleRow {
   background: transparent;
 }
+
+/* Enhanced Resizable Table Styles */
+.resizableTable {
+  table-layout: fixed;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.resizableTh {
+  position: relative;
+  overflow: hidden;
+  min-width: 50px;
+}
+
+.thContent {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 100%;
+  position: relative;
+}
+
+.columnResizer {
+  position: absolute;
+  top: 0;
+  right: -2px;
+  width: 4px;
+  height: 100%;
+  cursor: col-resize;
+  background: transparent;
+  z-index: 10;
+  transition: background-color 0.2s;
+}
+
+.columnResizer:hover {
+  background: #3b82f6;
+}
+
+.columnResizer:active {
+  background: #1d4ed8;
+}
+
+.resizableRow {
+  position: relative;
+}
+
+.rowResizer {
+  position: absolute;
+  bottom: -2px;
+  left: -100vw;
+  right: 0;
+  height: 4px;
+  cursor: row-resize;
+  background: transparent;
+  z-index: 5;
+  transition: background-color 0.2s;
+}
+
+.rowResizer:hover {
+  background: #3b82f6;
+}
+
+.rowResizer:active {
+  background: #1d4ed8;
+}
+
+.cellContent {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: 2px 0;
+}
+
+/* Resize indicators */
+.resizableTable .th:hover .columnResizer {
+  background: rgba(59, 130, 246, 0.3);
+}
+
+.resizableTable .tr:hover .rowResizer {
+  background: rgba(59, 130, 246, 0.3);
+}
+
+/* Auto-fit hint */
+.thContent span {
+  cursor: pointer;
+  user-select: none;
+}
+
+.thContent span:hover {
+  color: #3b82f6;
+}
+
+/* Prevent text selection during resize */
+.resizableTable.resizing {
+  user-select: none;
+}
+
+.resizableTable.resizing * {
+  cursor: col-resize !important;
+}
+
+.resizableTable.resizing.rowResize * {
+  cursor: row-resize !important;
+}

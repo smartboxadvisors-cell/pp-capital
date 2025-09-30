@@ -4,6 +4,7 @@ import { fetchImports } from '../api/imports';
 import useDebounce from '../hooks/useDebounce';
 import Filters from './Filters';
 import Pagination from './Pagination';
+import ResizableTable from './ResizableTable';
 import styles from '../styles/table.module.css';
 
 export default function ImportsTable() {
@@ -178,82 +179,9 @@ export default function ImportsTable() {
 
       {error && <div className={styles.errorBox}>{error}</div>}
 
-      <div className={styles.card}>
-        <div className={styles.tableScroll}>
-          <table className={styles.table}>
-            <thead className={styles.thead}>
-              <tr>
-                <th className={styles.th}>Scheme</th>
-                <th className={styles.th}>Instrument</th>
-                <th className={styles.th}>Quantity</th>
-                <th className={styles.th}>% to NAV</th>
-                <th className={styles.th}>Market Value (₹)</th>
-                <th className={styles.th}>Report Date</th>
-                <th className={styles.th}>ISIN</th>
-                <th className={styles.th}>Rating</th>
-                <th className={styles.th}>YTM</th>
-                <th className={styles.th}>Modified</th>
-              </tr>
-            </thead>
+      <ResizableTable rows={rows} loading={loading} />
 
-            <tbody>
-              {loading ? (
-                Array.from({ length: 8 }).map((_, i) => (
-                  <tr key={`sk-${i}`} className={`${styles.tr} ${i % 2 ? styles.trOdd : ''}`}>
-                    {Array.from({ length: 10 }).map((__, j) => (
-                      <td key={j} className={styles.td}><div className={styles.skeleton} /></td>
-                    ))}
-                  </tr>
-                ))
-              ) : rows.length === 0 ? (
-                <tr className={styles.tr}>
-                  <td className={styles.td} colSpan={10} style={{ textAlign: 'center', padding: '24px 8px', opacity: 0.7 }}>
-                    No results found.
-                  </td>
-                </tr>
-              ) : (
-                rows.map((r, i) => {
-                  const modified = r._modifiedTime ? new Date(r._modifiedTime).toLocaleString() : '—';
-                  const qty = (r.quantity ?? '—');
-                  const pct = (r.pct_to_nav ?? r.pct_to_NAV ?? '—');
-                  const marketValue = r.market_value
-                    ? r.market_value
-                    : (r.market_value_lacs ? r.market_value_lacs * 100000 : '—');
-
-                  return (
-                    <tr
-                      key={r._id}
-                      className={`${styles.tr} ${i % 2 ? styles.trOdd : ''} ${styles.rowHover}`}
-                      title={
-                        `Scheme: ${r.scheme_name || '—'}\n` +
-                        `Instrument: ${r.instrument_name || '—'}\n` +
-                        `Quantity: ${qty}\n` +
-                        `% to NAV: ${pct}\n` +
-                        `Market Value: ₹ ${marketValue === '—' ? '—' : Number(marketValue).toLocaleString('en-IN', { maximumFractionDigits: 2 })}\n` +
-                        `ISIN: ${r.isin || 'NA'}\n` +
-                        `Rating: ${r.rating || '—'}\n` +
-                        `YTM: ${r.ytm ?? '—'}\n` +
-                        `Report Date: ${r.report_date || '—'}`
-                      }
-                    >
-                      <td className={`${styles.td} ${styles.tdClamp}`} title={r.scheme_name || ''}><strong>{r.scheme_name || '—'}</strong></td>
-                      <td className={`${styles.td} ${styles.tdClamp}`} title={r.instrument_name || ''}>{r.instrument_name || '—'}</td>
-                      <td className={styles.td}>{qty}</td>
-                      <td className={styles.td}>{pct}</td>
-                      <td className={styles.td}>{marketValue === '—' ? '—' : `₹ ${Number(marketValue).toLocaleString('en-IN', { maximumFractionDigits: 2 })}`}</td>
-                      <td className={styles.td}>{r.report_date || '—'}</td>
-                      <td className={`${styles.td} ${styles.tdClamp}`} title={r.isin || ''}>{r.isin || 'NA'}</td>
-                      <td className={styles.td}>{r.rating || '—'}</td>
-                      <td className={styles.td}>{r.ytm ?? '—'}</td>
-                      <td className={styles.td}>{modified}</td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
-
+      <div style={{ padding: '12px' }}>
         <Pagination page={page} setPage={setPage} totalPages={totalPages} disabled={loading} />
       </div>
     </div>
