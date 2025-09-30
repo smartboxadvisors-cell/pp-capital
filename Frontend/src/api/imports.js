@@ -128,36 +128,21 @@ export async function fetchImports(
 
   params.set('hideIncomplete', hideIncomplete ? '1' : '0');
 
-  // Try /list/imports first; if it 404s or returns shape we don't expect, fall back to /imports
-  const urls = [
-    `${API_BASE}/list/imports?${params.toString()}`,
-    `${API_BASE}/imports?${params.toString()}`,
-  ];
+  // Use the correct API endpoint
+  const url = `${API_BASE}/imports?${params.toString()}`;
+  
+  try {
+    const res = await tryFetch(url, token, signal);
+    if (!res || res.aborted) return;
+    const { json } = res;
 
-  let lastErr;
-  for (const url of urls) {
-    try {
-      const res = await tryFetch(url, token, signal);
-      if (!res || res.aborted) return;
-      const { json } = res;
+    // Normalize response
+    const items = Array.isArray(json.items) ? json.items : [];
+    const total = Number(json.total || 0);
+    const totalPages = Math.max(1, Math.ceil(total / Number(limit || 50)));
 
-      // Normalize response
-      const items = Array.isArray(json.items) ? json.items : [];
-      const total = Number(json.total || 0);
-      const totalPages = Math.max(1, Math.ceil(total / Number(limit || 50)));
-
-      // If we got items or total reported, accept and return
-      if (items.length > 0 || total > 0 || json.ok) {
-        return { items, total, totalPages };
-      }
-      // If empty here, still return—caller can show "No results".
-      return { items, total, totalPages };
-    } catch (e) {
-      lastErr = e;
-      // continue to next url
-    }
+    return { items, total, totalPages };
+  } catch (error) {
+    throw error || new Error('Failed to fetch imports');
   }
-
-  // If both attempts failed:
-  throw lastErr || new Error('Failed to fetch imports');
 }
