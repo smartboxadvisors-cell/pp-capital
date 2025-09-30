@@ -77,15 +77,20 @@ router.get('/imports', async (req, res) => {
     addRegex('scheme_name', scheme);
     addRegex('instrument_name', instrument);
     addRegex('isin', isin);
-    if (Array.isArray(ratings) && ratings.length > 0) {
-      // OR of multiple starts-with regexes
-      filter.$or = ratings
-        .filter(v => String(v).trim())
-        .map(v => ({ rating: { $regex: `^${String(v).trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`, $options: 'i' } }));
-    } else if (rating) {
+    // Ratings filter: support multiple (ratings[]) and single (rating)
+    const ratingsArray = [];
+    if (Array.isArray(ratings)) {
+      for (const v of ratings) {
+        const t = String(v || '').trim();
+        if (t) ratingsArray.push(t);
+      }
+    }
+    const singleRating = String(rating || '').trim();
+    if (singleRating) ratingsArray.push(singleRating);
+    if (ratingsArray.length > 0) {
+      // Use $in with regex so we can combine with other filters safely
       filter.rating = {
-        $regex: `^${rating.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`,
-        $options: 'i',
+        $in: ratingsArray.map(v => new RegExp(`^${escapeRegex(v)}`, 'i')),
       };
     }
     // numeric ranges
