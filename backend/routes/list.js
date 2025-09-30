@@ -37,6 +37,7 @@ router.get('/imports', async (req, res) => {
       instrument   = '',
       isin         = '',
       rating       = '',
+      ratings,
       from         = '',  // report date from (yyyy-mm-dd)
       to           = '',  // report date to   (yyyy-mm-dd)
       quantityMin,
@@ -76,10 +77,20 @@ router.get('/imports', async (req, res) => {
     addRegex('scheme_name', scheme);
     addRegex('instrument_name', instrument);
     addRegex('isin', isin);
-    if (rating) {
+    // Ratings filter: support multiple (ratings[]) and single (rating)
+    const ratingsArray = [];
+    if (Array.isArray(ratings)) {
+      for (const v of ratings) {
+        const t = String(v || '').trim();
+        if (t) ratingsArray.push(t);
+      }
+    }
+    const singleRating = String(rating || '').trim();
+    if (singleRating) ratingsArray.push(singleRating);
+    if (ratingsArray.length > 0) {
+      // Use $in with regex so we can combine with other filters safely
       filter.rating = {
-        $regex: `^${rating.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`,
-        $options: 'i',
+        $in: ratingsArray.map(v => new RegExp(`^${escapeRegex(v)}`, 'i')),
       };
     }
     // numeric ranges

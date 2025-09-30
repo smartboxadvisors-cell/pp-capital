@@ -42,3 +42,22 @@
   background: #f8fafc;
   cursor: pointer;
 }
+
+/* Checkbox group for ratings */
+.checkboxGroup {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px 10px;
+  padding: 8px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  max-height: 220px;
+  overflow: auto;
+}
+.checkboxItem {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+}
+.actionsRow { margin-top: 6px; }
